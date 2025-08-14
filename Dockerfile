@@ -23,4 +23,5 @@ ENV PB_ORIGINS="*"
 
 # Quan trọng: Railway cấp biến $PORT → lắng nghe đúng $PORT
 # --dir /pb/pb_data: đảm bảo dữ liệu nằm ở volume
+CMD ["/bin/sh","-lc","/pb/pocketbase superuser upsert kaizmoba@gmail.com C@ixanhdz24]
 CMD ["/bin/sh","-lc","/pb/pocketbase serve --http=0.0.0.0:${PORT:-8080} --dir /pb/pb_data --origins \"${PB_ORIGINS}\""]
