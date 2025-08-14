@@ -1,26 +1,26 @@
-# --- PocketBase on Railway (Docker) ---
-FROM alpine:3.20
+FROM alpine:3 as downloader
 
-ARG PB_VERSION=0.29.2
+ARG TARGETOS
+ARG TARGETARCH
+ARG VERSION=0.16.10
 
-RUN apk add --no-cache ca-certificates wget unzip bash \
- && update-ca-certificates
+ENV BUILDX_ARCH="${TARGETOS:-linux}_${TARGETARCH:-amd64}"
 
-WORKDIR /pb
+# Install the dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    unzip \
+    wget \
+    zip \
+    zlib-dev
 
-# tải binary PB
-RUN wget -q -O /tmp/pb.zip \
-  https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip \
- && unzip /tmp/pb.zip -d /pb \
- && rm /tmp/pb.zip \
- && chmod +x /pb/pocketbase
+RUN wget https://github.com/pocketbase/pocketbase/releases/download/v${VERSION}/pocketbase_${VERSION}_${BUILDX_ARCH}.zip \
+    && unzip pocketbase_${VERSION}_${BUILDX_ARCH}.zip \
+    && chmod +x /pocketbase
 
-# thư mục dữ liệu bền (sẽ mount Volume của Railway vào đây)
-RUN mkdir -p /pb/pb_data
+FROM scratch
 
-# Cấu hình CORS qua biến môi trường PB_ORIGINS
-ENV PB_ORIGINS="*"
+EXPOSE 8090
 
-# Quan trọng: Railway cấp biến $PORT → lắng nghe đúng $PORT
-# --dir /pb/pb_data: đảm bảo dữ liệu nằm ở volume
-CMD ["/bin/sh","-lc","/pb/pocketbase serve --http=0.0.0.0:${PORT:-8080} --dir /pb/pb_data --origins \"${PB_ORIGINS}\""]
+COPY --from=downloader /pocketbase /usr/local/bin/pocketbase
+CMD ["/usr/local/bin/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb_data", "--publicDir=/pb_public"]
